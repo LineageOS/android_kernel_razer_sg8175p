@@ -1,0 +1,24 @@
+# Razer configuration options
+
+config MACH_RAZER
+	bool "Razer board"
+	depends on ARCH_QCOM
+	help
+	  Support for Razer boards.
+
+config MACH_RAZER_LAHAINA
+	bool "Razer Lahaina boards"
+	depends on ARCH_LAHAINA
+	select MACH_RAZER
+	help
+	  Support for Razer Lahaina boards.
+
+menu "Razer board selection"
+
+config MACH_RAZER_NICOLE
+	bool "Razer Nicole board"
+	select MACH_RAZER_LAHAINA
+	help
+	  Support for Razer Edge, codenamed Nicole.
+
+endmenu
