@@ -1,3 +1,13 @@
+ifeq ($(CONFIG_MACH_RAZER_NICOLE),y)
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_LAHAINA) += \
+	lahainap-nicole-overlay.dtbo
+
+lahainap-nicole-overlay.dtbo-base := lahainap.dtb lahainap-v2.dtb lahainap-v2.1.dtb
+else
+dtb-$(CONFIG_ARCH_LAHAINA) += lahainap-nicole.dtb
+endif
+else
 ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi-overlay.dtbo \
@@ -561,6 +571,7 @@ dtb-$(CONFIG_ARCH_DIREWOLF) += direwolf-ivi-rumi.dtb \
 	direwolf-ivi-adp-star.dtb \
 	direwolf-adas-rumi.dtb \
 	direwolf-adas-adp-star.dtb
+endif
 endif
 
 always		:= $(dtb-y)
