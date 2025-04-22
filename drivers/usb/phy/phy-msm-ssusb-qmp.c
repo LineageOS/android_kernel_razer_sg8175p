@@ -344,6 +344,14 @@ static int configure_phy_regs(struct usb_phy *uphy,
 {
 	struct msm_ssphy_qmp *phy = container_of(uphy, struct msm_ssphy_qmp,
 					phy);
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	u32 my_val = 0x37;
+	u32 my_value = 0x3F;
+	u32 my_offset1 = 0x120c;
+	u32 my_offset2 = 0x1214;
+	u32 my_offset3 = 0x160c;
+	u32 my_offset4 = 0x1614;
+#endif
 
 	if (!reg) {
 		dev_err(uphy->dev, "NULL PHY configuration\n");
@@ -356,6 +364,14 @@ static int configure_phy_regs(struct usb_phy *uphy,
 			usleep_range(reg->delay, reg->delay + 10);
 		reg++;
 	}
+
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	writel_relaxed(my_val, phy->base +my_offset1);
+	writel_relaxed(my_value, phy->base + my_offset2);
+	writel_relaxed(my_val, phy->base + my_offset3);
+	writel_relaxed(my_value, phy->base + my_offset4);
+#endif
+
 	return 0;
 }
 
