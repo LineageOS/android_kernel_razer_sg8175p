@@ -22,6 +22,12 @@
 #include <linux/soc/qcom/battery_charger.h>
 #include "qti_typec_class.h"
 
+#ifdef CONFIG_MACH_RAZER_NICOLE
+#include <linux/gpio.h>
+#define OTG_GPIO_NUMBER			356
+#define CHARGE_CURRENT			9
+#endif
+
 #define MSG_OWNER_BC			32778
 #define MSG_TYPE_REQ_RESP		1
 #define MSG_TYPE_NOTIFY			2
@@ -43,6 +49,10 @@
 #define BC_WLS_FW_GET_VERSION		0x44
 #define BC_SHUTDOWN_NOTIFY		0x47
 #define BC_GENERIC_NOTIFY		0x80
+#ifdef CONFIG_MACH_RAZER_NICOLE
+#define USB_POWER_SUPPLY_SET_SINK	0x90
+#define USB_POWER_SUPPLY_SET_SOURCE	0x91
+#endif
 
 /* Generic definitions */
 #define MAX_STR_LEN			128
@@ -96,6 +106,10 @@ enum battery_property_id {
 	BATT_RESISTANCE,
 	BATT_POWER_NOW,
 	BATT_POWER_AVG,
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	BATT_INPUT_SUSPEND,
+	BATT_BATTCHARGE_INPUT_SUSPEND,
+#endif
 	BATT_PROP_MAX,
 };
 
@@ -245,6 +259,10 @@ struct battery_chg_dev {
 	bool				ship_mode_en;
 	bool				debug_battery_detected;
 	bool				wls_fw_update_reqd;
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	bool				charge_smb_enable;
+	bool				battcharge_enable;
+#endif
 	u32				wls_fw_version;
 	u16				wls_fw_crc;
 	struct notifier_block		reboot_notifier;
@@ -780,6 +798,14 @@ static void handle_notification(struct battery_chg_dev *bcdev, void *data,
 	case BC_WLS_STATUS_GET:
 		pst = &bcdev->psy_list[PSY_TYPE_WLS];
 		break;
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	case USB_POWER_SUPPLY_SET_SINK:
+		gpio_direction_output(OTG_GPIO_NUMBER, 0);
+		break;
+	case USB_POWER_SUPPLY_SET_SOURCE:
+		gpio_direction_output(OTG_GPIO_NUMBER, 1);
+		break;
+#endif
 	default:
 		break;
 	}
@@ -1054,6 +1080,82 @@ static int __battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 
 	return rc;
 }
+
+#ifdef CONFIG_MACH_RAZER_NICOLE
+static int battery_psy_set_battcharge_enable(struct battery_chg_dev *bcdev,
+					     bool enable_charge)
+{
+	int rc;
+
+	if (enable_charge) {
+		rc = write_property_id(bcdev,
+				&bcdev->psy_list[PSY_TYPE_BATTERY],
+				BATT_BATTCHARGE_INPUT_SUSPEND, 1);
+		msleep(50);
+		bcdev->battcharge_enable = true;
+		if (rc < 0) {
+			pr_err("Failed to set battcharge enable, rc=%d\n", rc);
+		} else {
+			pr_debug("Set battcharge enable\n");
+		}
+	}
+
+	if (!enable_charge && bcdev->battcharge_enable) {
+		rc = write_property_id(bcdev,
+				&bcdev->psy_list[PSY_TYPE_BATTERY],
+				BATT_BATTCHARGE_INPUT_SUSPEND, 0);
+		msleep(50);
+		bcdev->battcharge_enable = false;
+		if (rc < 0) {
+			pr_err("Failed to set battcharge enable, rc=%d\n", rc);
+		} else {
+			pr_debug("Set battcharge enable\n");
+		}
+	}
+
+	return rc;
+}
+
+static int battery_psy_set_charge_enable(struct battery_chg_dev *bcdev,
+					 bool enable_charge)
+{
+	int rc;
+	int set_smb[CHARGE_CURRENT] = {3000,2000,1500,1000,500,200,100,50,0};
+	int num;
+
+	if (enable_charge && !bcdev->charge_smb_enable) {
+		for (num = 0; num < CHARGE_CURRENT;num++) {
+			rc = write_property_id(bcdev,
+					&bcdev->psy_list[PSY_TYPE_BATTERY],
+					BATT_INPUT_SUSPEND, set_smb [num]);
+			msleep(50);
+		}
+		bcdev->charge_smb_enable = true;
+		if (rc < 0) {
+			pr_err("Failed to set charge enable, rc=%d\n", rc);
+		} else {
+			pr_debug("Set charge enable\n");
+		}
+	}
+
+	if (!enable_charge && bcdev->charge_smb_enable) {
+		for (num = CHARGE_CURRENT-1; num >= 0;num--) {
+			rc = write_property_id(bcdev,
+					&bcdev->psy_list[PSY_TYPE_BATTERY],
+					BATT_INPUT_SUSPEND, set_smb [num]);
+			msleep(50);
+		}
+		bcdev->charge_smb_enable = false;
+		if (rc < 0) {
+			pr_err("Failed to set charge enable, rc=%d\n", rc);
+		} else {
+			pr_debug("Set charge enable\n");
+		}
+	}
+
+	return rc;
+}
+#endif
 
 static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 					int val)
@@ -1835,6 +1937,69 @@ static ssize_t charging_enabled_show(struct class *c,
 }
 static CLASS_ATTR_RW(charging_enabled);
 
+#ifdef CONFIG_MACH_RAZER_NICOLE
+static ssize_t input_suspend_store(struct class *c,
+				   struct class_attribute *attr,
+				   const char *buf, size_t count)
+{
+	struct battery_chg_dev *bcdev = container_of(c, struct battery_chg_dev,
+						battery_class);
+	int rc;
+	bool val;
+
+	if (kstrtobool(buf, &val))
+		return -EINVAL;
+
+	rc = battery_psy_set_charge_enable(bcdev, val);
+	bcdev->charge_smb_enable = val;
+	if (rc < 0)
+		return rc;
+
+	return count;
+}
+
+static ssize_t input_suspend_show(struct class *c,
+				  struct class_attribute *attr, char *buf)
+{
+	struct battery_chg_dev *bcdev = container_of(c, struct battery_chg_dev,
+						battery_class);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", bcdev->charge_smb_enable);
+}
+static CLASS_ATTR_RW(input_suspend);
+
+static ssize_t battcharge_input_suspend_store(struct class *c,
+					      struct class_attribute *attr,
+					      const char *buf, size_t count)
+{
+	struct battery_chg_dev *bcdev = container_of(c, struct battery_chg_dev,
+						battery_class);
+	int rc;
+	bool val;
+
+	if (kstrtobool(buf, &val))
+		return -EINVAL;
+
+	rc = battery_psy_set_battcharge_enable(bcdev, val);
+	bcdev->battcharge_enable = val;
+	if (rc < 0)
+		return rc;
+
+	return count;
+}
+
+static ssize_t battcharge_input_suspend_show(struct class *c,
+					     struct class_attribute *attr,
+					     char *buf)
+{
+	struct battery_chg_dev *bcdev = container_of(c, struct battery_chg_dev,
+						battery_class);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", bcdev->battcharge_enable);
+}
+static CLASS_ATTR_RW(battcharge_input_suspend);
+#endif
+
 static struct attribute *battery_class_attrs[] = {
 	&class_attr_soh.attr,
 	&class_attr_resistance.attr,
@@ -1852,6 +2017,10 @@ static struct attribute *battery_class_attrs[] = {
 	&class_attr_usb_real_type.attr,
 	&class_attr_usb_typec_compliant.attr,
 	&class_attr_charging_enabled.attr,
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	&class_attr_battcharge_input_suspend.attr,
+	&class_attr_input_suspend.attr,
+#endif
 	NULL,
 };
 ATTRIBUTE_GROUPS(battery_class);
