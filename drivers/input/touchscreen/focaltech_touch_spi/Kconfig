@@ -1,0 +1,10 @@
+#
+# SPI Focaltech Touchscreen driver configuration
+#
+
+config TOUCHSCREEN_FTS_SPI
+	tristate "SPI Focaltech Touchscreen"
+	depends on SPI_MASTER
+	help
+	  Say Y here if you have an SPI Focaltech touch panel.
+	  If unsure, say N.
