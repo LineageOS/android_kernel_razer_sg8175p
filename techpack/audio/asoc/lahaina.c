@@ -502,7 +502,11 @@ static struct dev_config mi2s_rx_cfg[] = {
 };
 
 static struct dev_config mi2s_tx_cfg[] = {
+#ifdef CONFIG_SND_SMARTPA_AW882XX
+	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S32_LE, 2},
+#else
 	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
+#endif
 	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[TERT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[QUAT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
@@ -7091,8 +7095,23 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(tert_mi2s_tx_hostless),
 	},
+#ifdef CONFIG_SND_SMARTPA_AW882XX
+	{
+		.name = "PRI MI2S TX_Hostless",
+		.stream_name = "PRI MI2S_TX Hostless Capture",
+		.dynamic = 1,
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(pri_mi2s_tx_hostless),
+	},
+#endif
 };
 
+#ifndef CONFIG_SND_SMARTPA_AW882XX
 static struct snd_soc_dai_link msm_bolero_fe_dai_links[] = {
 	{/* hw:x,33 */
 		.name = LPASS_BE_WSA_CDC_DMA_TX_0,
@@ -7118,6 +7137,7 @@ static struct snd_soc_dai_link msm_bolero_fe_stub_dai_links[] = {
 		SND_SOC_DAILINK_REG(wsa_cdcdma0_capture_stub),
 	},
 };
+#endif
 
 static struct snd_soc_dai_link msm_common_misc_fe_dai_links[] = {
 	{/* hw:x,34 */
@@ -7185,6 +7205,7 @@ static struct snd_soc_dai_link msm_common_misc_fe_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(slimbus8_hostless),
 	},
+#ifndef CONFIG_SND_SMARTPA_AW882XX
 	{/* hw:x,39 */
 		.name = LPASS_BE_TX_CDC_DMA_TX_5,
 		.stream_name = "TX CDC DMA5 Capture",
@@ -7195,6 +7216,7 @@ static struct snd_soc_dai_link msm_common_misc_fe_dai_links[] = {
 		.ops = &msm_cdc_dma_be_ops,
 		SND_SOC_DAILINK_REG(tx_cdcdma5_tx),
 	},
+#endif
 	{/* hw:x,40 */
 		.name = MSM_DAILINK_NAME(Media31),
 		.stream_name = "MultiMedia31",
@@ -8136,7 +8158,9 @@ static struct snd_soc_dai_link msm_afe_rxtx_lb_be_dai_link[] = {
 
 static struct snd_soc_dai_link msm_lahaina_dai_links[
 			ARRAY_SIZE(msm_common_dai_links) +
+#ifndef CONFIG_SND_SMARTPA_AW882XX
 			ARRAY_SIZE(msm_bolero_fe_dai_links) +
+#endif
 			ARRAY_SIZE(msm_common_misc_fe_dai_links) +
 			ARRAY_SIZE(msm_common_be_dai_links) +
 			ARRAY_SIZE(msm_tdm_be_dai_links) +
@@ -8487,6 +8511,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 				 __func__, dev->of_node->full_name, rc);
 			wsa_max_devs = 0;
 		}
+#ifndef CONFIG_SND_SMARTPA_AW882XX
 		if (!wsa_max_devs) {
 			memcpy(msm_lahaina_dai_links + total_links,
 				msm_bolero_fe_stub_dai_links,
@@ -8500,6 +8525,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 			total_links +=
 				ARRAY_SIZE(msm_bolero_fe_dai_links);
 		}
+#endif
 		memcpy(msm_lahaina_dai_links + total_links,
 		       msm_common_misc_fe_dai_links,
 		       sizeof(msm_common_misc_fe_dai_links));
