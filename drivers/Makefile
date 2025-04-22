@@ -8,6 +8,7 @@
 
 obj-y				+= irqchip/
 obj-y				+= bus/
+obj-y				+= pcie_mhi/
 
 obj-$(CONFIG_GENERIC_PHY)	+= phy/
 
