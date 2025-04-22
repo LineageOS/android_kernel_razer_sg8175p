@@ -2406,13 +2406,43 @@ static int dwc3_msm_link_clk_reset(struct dwc3_msm *mdwc, bool assert)
 	return ret;
 }
 
+#ifdef CONFIG_MACH_RAZER_NICOLE
+static void dwc3_ext_event_notify(struct dwc3_msm *mdwc);
+
+static void quirk_exception_recovery(struct dwc3_msm *mdwc, int flag)
+{
+	if (flag) {
+		mdwc->vbus_active = true;
+		mdwc->id_state = DWC3_ID_FLOAT;
+	} else {
+		mdwc->vbus_active = false;
+		mdwc->id_state = DWC3_ID_FLOAT;
+	}
+	dwc3_ext_event_notify(mdwc);
+}
+
+static int only_once = 1;
+#endif
+
 static void dwc3_msm_vbus_draw_work(struct work_struct *w)
 {
 	struct dwc3_msm *mdwc = container_of(w, struct dwc3_msm,
 			vbus_draw_work);
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	int ret;
 
+	msleep(1);
+	ret = dwc3_msm_gadget_vbus_draw(mdwc, dwc->vbus_draw);
+	if ((ret == -2) && (only_once == 1)) {
+		quirk_exception_recovery(mdwc, 0);
+		quirk_exception_recovery(mdwc, 1);
+		msleep(5);
+		only_once = 0;
+	}
+#else
 	dwc3_msm_gadget_vbus_draw(mdwc, dwc->vbus_draw);
+#endif
 }
 
 static void dwc3_gsi_event_buf_alloc(struct dwc3 *dwc)
@@ -5729,7 +5759,11 @@ static int dwc3_msm_gadget_vbus_draw(struct dwc3_msm *mdwc, unsigned int mA)
 
 	/* Do not set current multiple times */
 	if (mdwc->max_power == mA)
+#ifdef CONFIG_MACH_RAZER_NICOLE
+		return -2;
+#else
 		return 0;
+#endif
 
 	/*
 	 * Set the valid current only when the device
