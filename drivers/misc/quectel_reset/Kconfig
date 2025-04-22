@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# QUECTEL MODULE RESET driver configuration
+#
+
+config QUECTEL_MODULE_RESET
+	tristate "QUECTEL MODULE RESET Driver"
+	help
+	  Say Y here if you have a QUECTEL MODULE RESET.
+
+	  If unsure, say N.
+	  To compile this driver as a module, choose M here: the
+	  module will be called quectel_module_ctrl.
