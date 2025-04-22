@@ -13,6 +13,9 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/usb/typec_dp.h>
+#ifdef CONFIG_MACH_RAZER_NICOLE
+#include <linux/gpio.h>
+#endif
 
 #include "ucsi.h"
 #include "trace.h"
@@ -35,6 +38,9 @@
  * partners that do not support USB Power Delivery, this should still work.
  */
 #define UCSI_SWAP_TIMEOUT_MS	5000
+#ifdef CONFIG_MACH_RAZER_NICOLE
+#define OTG_GPIO_NUMBER		356
+#endif
 
 static int ucsi_acknowledge_command(struct ucsi *ucsi)
 {
@@ -570,12 +576,21 @@ static void ucsi_handle_connector_change(struct work_struct *work)
 		case UCSI_CONSTAT_PARTNER_TYPE_CABLE_AND_UFP:
 			u_role = USB_ROLE_HOST;
 			typec_set_data_role(con->port, TYPEC_HOST);
+#ifdef CONFIG_MACH_RAZER_NICOLE
+			gpio_direction_output(OTG_GPIO_NUMBER, 1);
+#endif
 			break;
 		case UCSI_CONSTAT_PARTNER_TYPE_DFP:
 			u_role = USB_ROLE_DEVICE;
 			typec_set_data_role(con->port, TYPEC_DEVICE);
+#ifdef CONFIG_MACH_RAZER_NICOLE
+			gpio_direction_output(OTG_GPIO_NUMBER, 0);
+#endif
 			break;
 		default:
+#ifdef CONFIG_MACH_RAZER_NICOLE
+			gpio_direction_output(OTG_GPIO_NUMBER, 0);
+#endif
 			break;
 		}
 
