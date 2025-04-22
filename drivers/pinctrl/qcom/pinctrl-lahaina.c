@@ -1938,7 +1938,11 @@ static const struct msm_pingroup lahaina_groups[] = {
 };
 
 static const int lahaina_reserved_gpios[] = {
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	56, 57, 58, 59, -1
+#else
 	52, 53, 54, 55, 56, 57, 58, 59, -1
+#endif
 };
 
 static struct pinctrl_qup lahaina_qup_regs[] = {
