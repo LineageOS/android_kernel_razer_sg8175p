@@ -308,20 +308,6 @@
 };
 
 &tlmm {
-	CONN_ID_0: CONN_ID_0_active {
-		mux {
-			pins = "gpio3", "gpio6", "gpio7", "gpio45", "gpio50", "gpio51";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio3", "gpio6", "gpio7", "gpio45", "gpio50", "gpio51";
-			drive-strength = <2>;
-			bias-pull-up;
-			input-enable;
-		};
-	};
-
 	gpio_nc: gpio_nc_pin {
 		mux {
 			pins = "gpio12", "gpio26", "gpio33";
@@ -450,6 +436,36 @@
 			drive-strength = <16>;
 		};
 	};
+
+	thundersoft_straps {
+		sku_straps: sku_straps {
+			mux {
+				pins = "gpio3", "gpio6", "gpio7";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio3", "gpio6", "gpio7";
+				drive-strength = <2>;
+				bias-pull-up;
+				input-enable;
+			};
+		};
+
+		board_rev_straps: board_rev_straps {
+			mux {
+				pins = "gpio45", "gpio50", "gpio51";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio45", "gpio50", "gpio51";
+				drive-strength = <2>;
+				bias-pull-up;
+				input-enable;
+			};
+		};
+	};
 };
 
 &soc {
@@ -467,7 +483,7 @@
 		ocp,control-gpio = <&tlmm 48 0x0>;
 		ocp,irq-gpio = <&tlmm 79 0x0>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&usb_ocp &CONN_ID_0 &sim_gpio &gpio_nc>;
+		pinctrl-0 = <&usb_ocp &sim_gpio &gpio_nc>;
 		status = "ok";
 	};
 
@@ -513,6 +529,20 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&usb2_vbus_boost_default>;
 	};
+
+	thundersoft_straps {
+		compatible = "thundersoft,straps";
+		sku-gpios = <&tlmm 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
+			<&tlmm 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
+			<&tlmm 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+		board_rev-gpios = <&tlmm 45 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
+			<&tlmm 50 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
+			<&tlmm 51 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sku_straps &board_rev_straps>;
+		status = "ok";
+	};
+
 };
 
 &sde_dsi {
@@ -929,6 +959,5 @@
 
 &pcie1 {
 	qcom,link-check-max-count = <50>;
-	qcom,ep-gpio = <&tlmm 6 0>;
 	qcom,boot-option = <0x0>;
 };
