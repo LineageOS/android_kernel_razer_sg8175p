@@ -67,3 +67,4 @@ obj-$(CONFIG_WIGIG_SENSING_SPI)	+= wigig_sensing.o
 obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
 obj-$(CONFIG_HAPTIC_NV)		+= haptic_nv/
 obj-$(CONFIG_QUECTEL_MODULE_RESET)	+= quectel_reset/
+obj-$(CONFIG_MACH_RAZER_NICOLE)	+= thundersoft_straps.o
