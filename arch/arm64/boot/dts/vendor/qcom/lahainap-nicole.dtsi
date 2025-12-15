@@ -1,3 +1,4 @@
+#include <dt-bindings/clock/qcom,gcc-lahaina.h>
 #include "lahaina-qrd-common.dtsi"
 #include "camera/lahaina-camera-sensor-nicole.dtsi"
 
@@ -266,8 +267,29 @@
 	/delete-node/ focaltech@38;
 };
 
+&sdc2_on {
+	sd-cd {
+		pins = "gpio80";
+		bias-pull-up;
+		drive-strength = <2>;
+	};
+};
+
+&sdc2_off {
+	sd-cd {
+		pins = "gpio80";
+		bias-disable;
+		drive-strength = <2>;
+	};
+};
+
 &sdhc_2 {
 	cd-gpios = <&tlmm 80 GPIO_ACTIVE_HIGH>;
+
+	cap-mmc-hw-reset;
+
+	resets = <&clock_gcc GCC_SDCC2_BCR>;
+	reset-names = "core_reset";
 };
 
 &display_panel_avdd {
