@@ -540,4 +540,5 @@ source "drivers/misc/ocxl/Kconfig"
 source "drivers/misc/cardreader/Kconfig"
 source "drivers/misc/habanalabs/Kconfig"
 source "drivers/misc/haptic_nv/Kconfig"
+source "drivers/misc/quectel_reset/Kconfig"
 endmenu
