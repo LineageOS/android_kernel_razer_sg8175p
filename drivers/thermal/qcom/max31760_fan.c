@@ -68,6 +68,7 @@ struct max31760_data {
 	struct regulator *vdda_reg;
 	u32 dpr_en_gpio;
 	u32 usb_charge_en_gpio;
+	int fan_speed_override;
 #else
 	u32 max31760_en_gpio;
 #endif
@@ -178,6 +179,31 @@ static ssize_t fan_speed_show(struct device *dev,
 	return sprintf(buf, "%d\n", (int)get_fan_current_speed_rpm());
 }
 
+static ssize_t fan_speed_override_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	int level;
+	struct max31760_data *pdata = Max31760_pdata;
+
+	if (sscanf(buf, "%d", &level) != 1 || level < -1 || level > 7)
+		return count;
+
+	mutex_lock(&pdata->update_lock);
+	pdata->fan_speed_override = level;
+	max31760_speed_control(pdata,
+			       level == -1 ? pdata->cur_state : level);
+	mutex_unlock(&pdata->update_lock);
+
+	return count;
+}
+
+static ssize_t fan_speed_override_show(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", Max31760_pdata->fan_speed_override);
+}
+
 static ssize_t fan_duty_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
@@ -259,6 +285,7 @@ static ssize_t dpr_en_show(struct device *dev,
 }
 
 static DEVICE_ATTR(fan_speed, 0664, fan_speed_show, fan_speed_store);
+static DEVICE_ATTR(fan_speed_override, 0664, fan_speed_override_show, fan_speed_override_store);
 static DEVICE_ATTR(usb_charge_en, 0664, usb_charge_en_show, usb_charge_en_store);
 static DEVICE_ATTR(dpr_en, 0664, dpr_en_show, dpr_en_store);
 static DEVICE_ATTR_RO(fan_duty);
@@ -277,9 +304,16 @@ static void max31760_set_cur_state_common(struct max31760_data *pdata,
 	if (state < FAN_SPEED_LEVEL0)
 		state = FAN_SPEED_LEVEL0;
 
-	if (!atomic_read(&pdata->in_suspend))
-		max31760_speed_control(pdata, state);
 	pdata->cur_state = state;
+
+	if (!atomic_read(&pdata->in_suspend)) {
+#ifdef CONFIG_MACH_RAZER_NICOLE
+		if (pdata->fan_speed_override == -1)
+			max31760_speed_control(pdata, state);
+#else
+		max31760_speed_control(pdata, state);
+#endif
+	}
 }
 
 static int max31760_get_max_state(struct thermal_cooling_device *cdev,
@@ -349,6 +383,9 @@ static void max31760_hw_init(struct max31760_data *pdata)
 	max31760_write_byte(pdata, MAX31760_CTRL_REG2, 0x11);
 	max31760_write_byte(pdata, MAX31760_CTRL_REG3, 0x31);
 	mutex_lock(&pdata->update_lock);
+#ifdef CONFIG_MACH_RAZER_NICOLE
+	pdata->fan_speed_override = -1;
+#endif
 	max31760_speed_control(pdata, FAN_SPEED_LEVEL0);
 	pdata->cur_state = FAN_SPEED_LEVEL0;
 	mutex_unlock(&pdata->update_lock);
@@ -550,6 +587,10 @@ static int max31760_probe(struct i2c_client *client, const struct i2c_device_id 
 	Max31760_pdata = pdata;
 	if (sysfs_create_file(&(pdata->cdev->device.kobj), &dev_attr_fan_speed.attr)) {
 		dev_err(pdata->dev, "failed to create note fan_speed, ret:%d\n", ret);
+	}
+
+	if (sysfs_create_file(&(pdata->cdev->device.kobj), &dev_attr_fan_speed_override.attr)) {
+		dev_err(pdata->dev, "failed to create note fan_speed_override, ret:%d\n", ret);
 	}
 
 	if (sysfs_create_file(&(pdata->cdev->device.kobj), &dev_attr_fan_duty.attr)) {
