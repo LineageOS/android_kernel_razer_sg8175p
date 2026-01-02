@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3fed47e5_22b78cd2",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 29242
+      },
+      "writtenOn": "2026-01-02T06:18:12Z",
+      "side": 1,
+      "message": "To be used in upcoming per-app fan profiles feature.\n\n-1 \u003d Auto (default)\n0 \u003d Off\n1-7 \u003d Speeds",
+      "revId": "eb54a92b5bc956bd9919d3637d9e5fb7eccb04ec",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
